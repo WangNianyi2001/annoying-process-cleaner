@@ -1,3 +1,7 @@
+# Annoying Process Cleaner
+# By Nianyi Wang (@wangnianyi2001)
+# https://github.com/WangNianyi2001/annoying-process-cleaner
+
 # Run as administrator
 
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
