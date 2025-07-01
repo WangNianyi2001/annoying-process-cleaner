@@ -5,6 +5,11 @@ Even though you've already quitted the app, SOMEthing still remains in the task 
 They seem pretty suspicious, and you have absolutely no idea of what they really do.
 
 This PowerShell script is for stopping those background stuffs (processes, services, devices).
+It does NOT uninstall/break/invalidate those functionalities, it just cools them down, makes what shouldn't be running calm, and tells them not to automatically start themselves again without being explicitly asked.
+
+Although, as this script could give your device a nice break for a while, I'm pretty sure certain things WILL redo all the deeds the next time you use them.
+So, my advice is to run this script everytime you fully stopped using those stuffs.
+(Don't run this while working with them!)
 
 Intended for Windows only! :)
 
