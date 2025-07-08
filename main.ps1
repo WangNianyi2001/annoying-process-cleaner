@@ -63,6 +63,56 @@ function SuppressScheduledTasks($tasks) {
 	}
 }
 
+function RemoveRegistryItem($path, $name) {
+	Write-Host "Removing registry value '$name' from '$path'"
+	if (Test-Path $path) {
+		try {
+			if ((Get-ItemProperty -Path $path -ErrorAction Stop).PSObject.Properties.Name -contains $name) {
+				Remove-ItemProperty -Path $path -Name $name -ErrorAction Stop
+			} else {
+				Write-Host "Registry value '$name' not found in '$path'"
+			}
+		} catch {
+			Write-Warning "Failed to remove registry value '$name' from '$path': $_"
+		}
+	} else {
+		Write-Host "Registry path '$path' does not exist"
+	}
+}
+
+function SetRegistryItem($path, $name, $value, $type = "String") {
+	Write-Host "Setting registry value '$name' in '$path' to '$value' (Type: $type)"
+	try {
+		if (-not (Test-Path $path)) {
+			New-Item -Path $path -Force | Out-Null
+		}
+		New-ItemProperty -Path $path -Name $name -Value $value -PropertyType $type -Force | Out-Null
+	} catch {
+		Write-Warning "Failed to set registry value '$name' in '$path': $_"
+	}
+}
+
+function RemoveRegAutorun($name) {
+	$autorunPaths = @(
+		"HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
+		"HKLM:\Software\Microsoft\Windows\CurrentVersion\Run"
+	)
+	foreach ($path in $autorunPaths) {
+		RemoveRegistryItem -path $path -name $name
+	}
+}
+
+function RemoveRegAutorunNotification($name) {
+	$notifPaths = @(
+		"HKCU:\Software\Microsoft\Windows\CurrentVersion\RunNotification",
+		"HKLM:\Software\Microsoft\Windows\CurrentVersion\RunNotification"
+	)
+	foreach ($path in $notifPaths) {
+		RemoveRegistryItem -path $path -name $name
+	}
+}
+
+
 
 
 # Adobe
@@ -85,6 +135,7 @@ function DoAdobe {
 	KillProcessByName "Adobe Desktop Service" # Creative Cloud Core Service
 	SuppressScheduledTasks "Adobe Creative Cloud"
 	SuppressScheduledTasks "Launch Adobe CCXProcess"
+	RemoveRegAutorunNotification "StartupTNotiAdobe CCXProcess"
 
 	# Acrobat
 
@@ -94,6 +145,8 @@ function DoAdobe {
 	KillProcessByName "AcrobatNotificationClient" # Notification Manager for Adobe Acrobat
 	SuppressServiceByName "Adobe Acrobat Update Service"
 	SuppressScheduledTasks "Adobe Acrobat Update Task"
+	RemoveRegAutorun "Adobe Acrobat Synchronizer"
+	RemoveRegAutorunNotification "StartupTNotiAdobe Acrobat Synchronizer"
 }
 
 
