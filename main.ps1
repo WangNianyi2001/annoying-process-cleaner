@@ -52,25 +52,40 @@ function SuppressServiceByName($name) {
 	}
 }
 
+function SuppressScheduledTasks($tasks) {
+	foreach ($task in $tasks) {
+		try {
+			Write-Host "Disabling scheduled task: $task"
+			Disable-ScheduledTask -TaskName $task -ErrorAction Stop
+		} catch {
+			Write-Warning "Failed to disable scheduled task '$task': $_"
+		}
+	}
+}
+
 
 
 # Adobe
 
 function DoAdobe {
-	# Generic
+	# Core
 
 	KillProcessByName "CoreSync" # Adobe Content Synchronizer
 	KillProcessByName "Adobe Crash Processor"
-	KillProcessByName "CCXProcess" # Creative Cloud Content Manager
-	KillProcessByName "Adobe Desktop Service" # Creative Cloud Core Service
-	KillProcessByName "Creative Cloud Helper"
-	KillProcessByName "AdobeIPCBroker" # Creative Cloud Interprocess Service
-	KillProcessByName "AdobeNotificationClient" # Notification Manager for Adobe Creative Cloud
 	# A process named "Node.js JavaScript Runtime"
 	# I have no fucking clue why Adobe is running an individual Node program located at C:\Program Files\Adobe\Adobe Creative Cloud Experience\libs .
 	# It's kinda hard to filter this little shit out so we're skipping it for now.
 
-	
+	# Creative Cloud
+
+	KillProcessByName "CCXProcess" # Creative Cloud Content Manager
+	KillProcessByName "Creative Cloud Helper"
+	KillProcessByName "AdobeIPCBroker" # Creative Cloud Interprocess Service
+	KillProcessByName "AdobeNotificationClient" # Notification Manager for Adobe Creative Cloud
+	KillProcessByName "Adobe Desktop Service" # Creative Cloud Core Service
+	SuppressScheduledTasks "Adobe Creative Cloud"
+	SuppressScheduledTasks "Launch Adobe CCXProcess"
+
 	# Acrobat
 
 	KillProcessByName "AdobeCollabSync" # Acrobat Collaboration Synchronizer
@@ -78,6 +93,7 @@ function DoAdobe {
 	KillProcessByName "Acrobat Licensing Service"
 	KillProcessByName "AcrobatNotificationClient" # Notification Manager for Adobe Acrobat
 	SuppressServiceByName "Adobe Acrobat Update Service"
+	SuppressScheduledTasks "Adobe Acrobat Update Task"
 }
 
 
@@ -93,6 +109,8 @@ function DoHp {
 	# HP Support Solutions Framework
 	KillProcessByName "HP Support Solutions Framework Service"
 	SuppressServiceByName "HP Support Solutions Framework Service"
+	SuppressScheduledTasks "HP Support Solutions Framework Report"
+	SuppressScheduledTasks "HP Support Solutions Framework Updater"
 
 	# HSA series
 	# https://www.reddit.com/r/Hewlett_Packard/comments/syn2mt/hp_hsa/
