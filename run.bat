@@ -8,6 +8,8 @@ if %errorlevel% neq 0 (
 	powershell -Command "Start-Process cmd -ArgumentList '/c cd /d %~dp0 & run.bat & pause' -Verb RunAs"
 	exit /b
 )
+
+:: Run
 npm run run
 
 :: Pause for output texts

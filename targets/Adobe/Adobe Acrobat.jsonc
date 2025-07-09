@@ -1,0 +1,41 @@
+{
+	"name": "Adobe Acrobat",
+	"contributors": [
+		"Nianyi Wang <wangnianyi2001@outlook.com> (https://github.com/wangnianyi2001/)"
+	],
+	"targets": [
+		{
+			"type": "process",
+			"displayName": "Acrobat Collaboration Synchronizer",
+			"name": "AdobeCollabSync"
+			// TODO: Twice.
+		},
+		{
+			"type": "process",
+			"name": "Acrobat Licensing Service"
+		},
+		{
+			"type": "process",
+			"displayName": "Notification Manager for Adobe Acrobat",
+			"name": "AcrobatNotificationClient"
+			// TODO: With RuntimeBroker.
+		},
+		{
+			"type": "service",
+			"displayName": "Adobe Acrobat Update Service",
+			"name": "AdobeARMservice"
+		},
+		{
+			"type": "scheduled-task",
+			"name": "Adobe Acrobat Update Task"
+		},
+		{
+			"type": "registry/run",
+			"name": "Adobe Acrobat Synchronizer"
+		},
+		{
+			"type": "registry/run-notification",
+			"name": "StartupTNotiAdobe Acrobat Synchronizer"
+		}
+	]
+}

@@ -12,11 +12,14 @@ export function HideStatusBar() {
 	ora.stop();
 }
 
-export function SetStatusBarText(text: string) {
-	ora.text = text;
+export function SetStatusBarText(text: any) {
+	ora.text = text + '';
 }
 
 export function Log(message: any, level: 'log' | 'warn' | 'error' = 'log') {
+	if(message === undefined)
+		return;
+	
 	const isSpinning = ora.isSpinning;
 	if(isSpinning)
 		HideStatusBar();
@@ -27,13 +30,30 @@ export function Log(message: any, level: 'log' | 'warn' | 'error' = 'log') {
 		console.log(message);
 		break;
 	case 'warn':
-		console.warn(message);
+		console.warn('WARN: ' + message);
 		break;
 	case 'error':
-		console.error(message);
+		console.error('ERROR: ' + message);
 		break;
 	}
 
 	if(isSpinning)
 		ShowStatusBar();
+}
+
+import { logNotFoundWarnings, logFailingErrors } from '../utils/env.mjs';
+
+export function LogNonExistingWarning(message: any) {
+	if(!logNotFoundWarnings)
+		return;
+	Log(message, 'warn');
+}
+
+export function LogFailingError(message: any) {
+	if(!logFailingErrors)
+		return;
+	message = message?.message || message;
+	message = '' + message;
+	message = (message as string).trim();
+	Log(message, 'error');
 }
