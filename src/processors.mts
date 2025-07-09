@@ -1,156 +1,123 @@
-export const processors: { [type: string]: Function } = {
-	'process': KillProcess,
-	'service': SuppressService,
-	'scheduled-task': DeleteScheduledTask,
-	'registry': ProcessRegistry,
-	'registry/run': DeleteRegistryRun,
-	'registry/run-notification': DeleteRegistryRunNotification,
-};
+import * as Process from './system-resources/process.mjs';
+import * as Service from './system-resources/services.mjs';
+import * as ScheduledTask from './system-resources/scheduled-task.mjs';
+import * as Registry from './system-resources/registry.mjs';
 
-import { Exec } from './utils/cmd.mjs';
-import { Log, SetStatusBarText } from './utils/log.mjs';
-
-import { GetTaskList } from './utils/task-list.mjs';
-export async function KillProcess(descriptor: ProcessDescriptor) {
-	if(!descriptor.name)
-		return;
-	const processName = `${descriptor.name}.exe`;
-
-	SetStatusBarText(`Fetching task list`);
-	const taskList = await GetTaskList();
-
-	const taskInfo = taskList.find(task => task.name == processName);
-	if(!taskInfo) {
-		Log(`Process "${processName}" not running.`);
-		return;
-	}
-
-	SetStatusBarText(`Killing process "${processName}"`);
-
-	try {
-		await Exec(`taskkill /F /IM ${processName}`);
-	} catch {
-		Log(`Failed to kill process "${processName}".`, 'warn');
-		return;
-	}
-	Log(`Killed process "${processName}".`);
-}
-
-import { GetServiceList } from './utils/service-list.mjs';
-export async function SuppressService(descriptor: ServiceDescriptor) {
-	const serviceName = descriptor.name || descriptor.displayName;
-	if(!serviceName)
-		return;
-
-	SetStatusBarText(`Fetching service list`);
-	const serviceList = await GetServiceList();
-
-	const serviceInfo = serviceList.find(service => {
-		if(descriptor.name)
-			return service.name === descriptor.name;
-		if(descriptor.displayName)
-			return service.displayName == descriptor.displayName;
-		return false;
-	});
-	if(!serviceInfo) {
-		Log(`Service "${serviceName}" does not exist.`);
-		return;
-	}
-
-	if(serviceInfo.state === 'RUNNING') {
+import { Log, SetStatusBarText, LogNonExistingWarning, LogFailingError } from './utils/log.mjs';
+function StandardApi<Descriptor, Info>(
+	api: SystemResourceApi<Descriptor, Info>,
+	config: Optional<{
+		mode: 'delete' | 'suspend';
+		notFoundMessage: (descriptor: Descriptor) => string;
+		filter?: (info: Info) => boolean,
+		statusText: (info: Info) => string;
+		succeedMessage: (info: Info) => string;
+		failedMessage: (info: Info, err?: any) => string;
+	}> = {}
+): (descriptor: Descriptor) => Promise<boolean> {
+	return async descriptor => {
 		try {
-			SetStatusBarText(`Stopping service "${serviceName}"`);
-			await Exec(`sc stop "${serviceInfo.name}"`);
-		} catch (err) {
-			Log(`Failed to stop "${serviceName}".`, 'warn');
-		}
-		try {
-			SetStatusBarText(`Setting service "${serviceName}"'s triggering method to manual`);
-			await Exec(`sc config "${serviceInfo.name}" start=manual`);
-			Log(`Set service "${serviceName}"'s triggering method to manual`);
-		} catch (err) {
-			Log(`Failed to set "${serviceName}"'s triggering method.`, 'warn');
-		}
-	}
-	Log(`Suppressed service "${serviceName}".`);
-}
-
-export async function DeleteScheduledTask(descriptor: ScheduledTaskDescriptor) {
-	const taskName = descriptor.name;
-	if(!taskName)
-		return;
-
-	try {
-		SetStatusBarText(`Deleting scheduled task "${taskName}"`);
-		await Exec(`schtasks /Delete /TN "${taskName}" /F`);
-		Log(`Deleted scheduled task "${taskName}".`);
-	} catch (err) {
-		Log(`Failed to delete task "${taskName}".`, 'warn');
-	}
-}
-
-export async function ProcessRegistry(descriptor: RegistryDescriptor) {
-	if(!descriptor.path)
-		return;
-	const path = descriptor.path.replaceAll('/', '\\');
-	const name = descriptor.name;
-	const fullName = `${path}\\${name}`;
-
-	try {
-		SetStatusBarText(`Processing registry at ${fullName}`);
-		switch(descriptor.action) {
-		case 'delete':
+			const info = await api.Query(descriptor);
+			if(!info || !(config.filter?.(info) ?? true)) {
+				LogNonExistingWarning(config.notFoundMessage?.(descriptor));
+				return false;
+			}
+			SetStatusBarText(config?.statusText?.(info));
 			try {
-				await Exec(`reg delete "${path}" /v "${descriptor.name}" /f`);
-				Log(`Deleted registry at ${fullName}.`);
+				await (config.mode === 'suspend' ? api.Suspend : api.Delete)!.call(null, info);
 			}
 			catch(e) {
-				if(typeof e !== 'object')
-					throw e;
-				const err = e as import("child_process").ExecException;
-				if(!(err.message + '').includes('ERROR: The system was unable to find the specified registry key or value.'))
-					throw e;
-				Log(`Registry at ${fullName} does not exist.`);
+				Log(config.failedMessage?.(info), 'error');
+				throw e;
 			}
-			finally {
-				break;
-			}
-		default:
-			throw `Registry processing method "${descriptor.action}" is not supported.`;
+			Log(config.succeedMessage?.(info));
+
+			return true;
 		}
-	}
-	catch(err) {
-		Log(`Failed to process registry at ${fullName}.`, 'warn');
-		Log(err, 'error');
-	}
+		catch(e) {
+			LogFailingError(e);
+			return false;
+		}
+	};
 }
 
-export async function DeleteRegistryRun(descriptor: RegistryRunDescriptor) {
-	const paths = [
-		'HKCU/Software/Microsoft/Windows/CurrentVersion/RunNotification',
-		'HKLM/Software/Microsoft/Windows/CurrentVersion/RunNotification',
-	];
-	for(const path of paths) {
-		await ProcessRegistry({
-			type: 'registry',
-			path: path,
-			name: descriptor.name,
-			action: 'delete',
-		});
-	}
-}
+// Export
 
-export async function DeleteRegistryRunNotification(descriptor: RegistryRunNotificationDescriptor) {
-	const paths = [
-		'HKCU/Software/Microsoft/Windows/CurrentVersion/Run',
-		'HKLM/Software/Microsoft/Windows/CurrentVersion/Run',
-	];
-	for(const path of paths) {
-		await ProcessRegistry({
-			type: 'registry',
-			path: path,
-			name: descriptor.name,
-			action: 'delete',
-		});
-	}
-}
+export const processors: {
+	[type: string]: ((descriptor: any) => Promise<boolean>)
+} = {
+	'process': StandardApi(Process.api, {
+		mode: 'delete',
+		notFoundMessage: descriptor => `Cannot find process "${descriptor.name}".`,
+		statusText: info => `Killing process ${info.name}.`,
+		succeedMessage: info => `Killed process "${info.name}".`,
+		failedMessage: info => `Failed to kill process "${info.name}".`,
+	}),
+	'service': StandardApi(Service.api, {
+		mode: 'suspend',
+		notFoundMessage: descriptor => `Cannot find service "${descriptor.name || descriptor.displayName}".`,
+		filter: info => info.state === 'RUNNING',
+		statusText: info => `Suspending service ${info.name}.`,
+		succeedMessage: info => `Suspended service "${info.name}".`,
+		failedMessage: info => `Failed to suspend service "${info.name}".`,
+	}),
+	'scheduled-task': StandardApi(ScheduledTask.api, {
+		mode: 'suspend',
+		notFoundMessage: descriptor => `Cannot find scheduled task "${descriptor.name}".`,
+		filter: info => info.status === 'Ready',
+		statusText: info => `Suspending scheduled task ${info.name}.`,
+		succeedMessage: info => `Suspended scheduled task "${info.name}".`,
+		failedMessage: info => `Failed to suspend scheduled task "${info.name}".`,
+	}),
+	'registry': StandardApi(Registry.api, {
+		mode: 'delete',
+		notFoundMessage: descriptor => `Cannot find registry "${descriptor.path.replaceAll('/', '\\')}\\${descriptor.name}".`,
+		statusText: info => `Suspending registry ${info.fullPath}.`,
+		succeedMessage: info => `Suspended registry "${info.fullPath}".`,
+		failedMessage: info => `Failed to suspend registry "${info.fullPath}".`,
+	}),
+	async 'registry/run'(descriptor: RegistryRunDescriptor) {
+		const paths = [
+			'HKCU/Software/Microsoft/Windows/CurrentVersion/RunNotification',
+			'HKLM/Software/Microsoft/Windows/CurrentVersion/RunNotification',
+		];
+		let success = false;
+		for(const path of paths) {
+			success ||= await StandardApi(Registry.api, {
+				mode: 'delete',
+				notFoundMessage: descriptor => `Cannot find registry "${descriptor.path.replaceAll('/', '\\')}\\${descriptor.name}".`,
+				statusText: info => `Suspending registry ${info.fullPath}.`,
+				succeedMessage: info => `Suspended registry "${info.fullPath}".`,
+				failedMessage: info => `Failed to suspend registry "${info.fullPath}".`,
+			})({
+				type: 'registry',
+				path: path,
+				name: descriptor.name,
+				action: 'delete',
+			});
+		}
+		return success;
+	},
+	async 'registry/run-notification'(descriptor: RegistryRunNotificationDescriptor) {
+		const paths = [
+			'HKCU/Software/Microsoft/Windows/CurrentVersion/Run',
+			'HKLM/Software/Microsoft/Windows/CurrentVersion/Run',
+		];
+		let success = false;
+		for(const path of paths) {
+			success ||= await StandardApi(Registry.api, {
+				mode: 'delete',
+				notFoundMessage: descriptor => `Cannot find registry "${descriptor.path.replaceAll('/', '\\')}\\${descriptor.name}".`,
+				statusText: info => `Suspending registry ${info.fullPath}.`,
+				succeedMessage: info => `Suspended registry "${info.fullPath}".`,
+				failedMessage: info => `Failed to suspend registry "${info.fullPath}".`,
+			})({
+				type: 'registry',
+				path: path,
+				name: descriptor.name,
+				action: 'delete',
+			});
+		}
+		return success;
+	},
+};

@@ -6,17 +6,30 @@ type ServiceInfo = {
 	tags: ('STOPPABLE' | 'NOT_PAUSABLE' | 'IGNORES_SHUTDOWN' | 'ACCEPTS_PRESHUTDOWN')[];
 };
 
-let serviceList: ServiceInfo[] | null = null;
+let services: ServiceInfo[] | null = null;
 
-export async function GetServiceList() {
-	if(serviceList === null)
-		serviceList = await FetchServiceList();
-	return serviceList;
-}
+export const api: SystemResourceApi<ServiceDescriptor, ServiceInfo> = {
+	async Query(descriptor: ServiceDescriptor) {
+		if(services === null)
+			services = await FetchServices();
 
-import { Exec } from './cmd.mjs';
+		return services!.find(service => {
+			if(descriptor.name)
+				return service.name === descriptor.name;
+			if(descriptor.displayName)
+				return service.displayName == descriptor.displayName;
+			return false;
+		}) ?? null;
+	},
+	async Suspend(serviceInfo: ServiceInfo) {
+		await Exec(`sc stop "${serviceInfo.name}"`);
+		await Exec(`sc config "${serviceInfo.name}" start=manual`);
+	},
+};
 
-async function FetchServiceList(): Promise<ServiceInfo[]> {
+import { Exec } from '../utils/cmd.mjs';
+
+async function FetchServices(): Promise<ServiceInfo[]> {
 	const results: ServiceInfo[] = [];
 
 	const text = await Exec('sc query state=all');
