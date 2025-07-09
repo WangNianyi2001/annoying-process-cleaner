@@ -18,10 +18,9 @@ Intended for Windows only! :)
 
 The script is written with NodeJS (originally with PowerScript, see the `v0.1.0` tag if you prefer that style, but it's not under maintenance anymore).
 
-To install the dependencies: `npm i`
+To install the dependencies: Double-click to run `install.bat`.
 
-To run the script: `npm --run=run`  
-(Yeah I know this looks weird, but I mean it's Windows :))
+To run the script: Double-click to run `run.bat`, a UAC panel may appear.
 
 
 ## Contribution
