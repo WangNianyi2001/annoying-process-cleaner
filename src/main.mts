@@ -46,10 +46,15 @@ async function ProcessTargetFile(path: string) {
 	if(!CheckTargetFileFormat(content))
 		throw `Content is in the wrong format.`;
 
+	if(!content.enabled)
+		return;
+
 	Log(`\n${'='.repeat(16)} ${content.name} ${'='.repeat(16)}`);
 
 	for(const target of content.targets) {
-		if(!('type' in target))
+		if(!(target instanceof Object))
+			continue;
+		if(!target.enabled)
 			continue;
 		await ProcessTarget(target);
 	}

@@ -24,11 +24,11 @@
 			"name": "HPSupportSolutionsFrameworkService"
 		},
 		{
-			"type": "service",
+			"type": "scheduled-task",
 			"displayName": "HP Support Solutions Framework Report"
 		},
 		{
-			"type": "service",
+			"type": "scheduled-task",
 			"displayName": "HP Support Solutions Framework Updater"
 		},
 

@@ -1,11 +1,13 @@
 type TargetFile = {
 	name: string;
 	contributors?: string[];
+	enabled?: boolean;
 	targets: TargetDescriptor<any>[];
 }
 
 interface TargetDescriptor<TypeName extends string> {
 	type: TypeName;
+	enabled?: boolean;
 }
 
 interface ProcessDescriptor extends TargetDescriptor<'process'> {
