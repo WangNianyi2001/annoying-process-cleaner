@@ -4,7 +4,7 @@ import * as ScheduledTask from './system-resources/scheduled-task.mjs';
 import * as Registry from './system-resources/registry.mjs';
 
 import { Log, SetStatusBarText, LogNonExistingWarning, LogFailingError } from './utils/log.mjs';
-function StandardApi<Descriptor, Info>(
+function StandardClean<Descriptor, Info>(
 	api: SystemResourceApi<Descriptor, Info>,
 	config: Optional<{
 		mode: 'delete' | 'suspend';
@@ -43,17 +43,17 @@ function StandardApi<Descriptor, Info>(
 
 // Export
 
-export const processors: {
+export const cleaners: {
 	[type: string]: ((descriptor: any) => Promise<boolean>)
 } = {
-	'process': StandardApi(Process.api, {
+	'process': StandardClean(Process.api, {
 		mode: 'delete',
 		notFoundMessage: descriptor => `Cannot find process "${descriptor.name}".`,
 		statusText: info => `Killing process ${info.name}.`,
 		succeedMessage: info => `Killed process "${info.name}".`,
 		failedMessage: info => `Failed to kill process "${info.name}".`,
 	}),
-	'service': StandardApi(Service.api, {
+	'service': StandardClean(Service.api, {
 		mode: 'suspend',
 		notFoundMessage: descriptor => `Cannot find service "${descriptor.name || descriptor.displayName}".`,
 		filter: info => info.state === 'RUNNING',
@@ -61,7 +61,7 @@ export const processors: {
 		succeedMessage: info => `Suspended service "${info.name}".`,
 		failedMessage: info => `Failed to suspend service "${info.name}".`,
 	}),
-	'scheduled-task': StandardApi(ScheduledTask.api, {
+	'scheduled-task': StandardClean(ScheduledTask.api, {
 		mode: 'suspend',
 		notFoundMessage: descriptor => `Cannot find scheduled task "${descriptor.name}".`,
 		filter: info => info.status === 'Ready',
@@ -69,7 +69,7 @@ export const processors: {
 		succeedMessage: info => `Suspended scheduled task "${info.name}".`,
 		failedMessage: info => `Failed to suspend scheduled task "${info.name}".`,
 	}),
-	'registry': StandardApi(Registry.api, {
+	'registry': StandardClean(Registry.api, {
 		mode: 'delete',
 		notFoundMessage: descriptor => `Cannot find registry "${descriptor.path.replaceAll('/', '\\')}\\${descriptor.name}".`,
 		statusText: info => `Suspending registry ${info.fullPath}.`,
@@ -83,7 +83,7 @@ export const processors: {
 		];
 		let success = false;
 		for(const path of paths) {
-			success ||= await StandardApi(Registry.api, {
+			success ||= await StandardClean(Registry.api, {
 				mode: 'delete',
 				notFoundMessage: descriptor => `Cannot find registry "${descriptor.path.replaceAll('/', '\\')}\\${descriptor.name}".`,
 				statusText: info => `Suspending registry ${info.fullPath}.`,
@@ -105,7 +105,7 @@ export const processors: {
 		];
 		let success = false;
 		for(const path of paths) {
-			success ||= await StandardApi(Registry.api, {
+			success ||= await StandardClean(Registry.api, {
 				mode: 'delete',
 				notFoundMessage: descriptor => `Cannot find registry "${descriptor.path.replaceAll('/', '\\')}\\${descriptor.name}".`,
 				statusText: info => `Suspending registry ${info.fullPath}.`,

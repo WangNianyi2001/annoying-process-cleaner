@@ -1,0 +1,16 @@
+name: HP (Software Components in Device Manager)
+enabled: false
+
+contributors:
+  - Nianyi Wang <wangnianyi2001@outlook.com> (https://github.com/wangnianyi2001/)
+
+targets:
+
+  - type: device
+    name: HP Application Enabling Service
+
+  - type: device
+    name: HP Device Health Service
+
+  - type: device
+    name: Omen Software and Services

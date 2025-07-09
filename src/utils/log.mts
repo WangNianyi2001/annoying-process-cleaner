@@ -30,10 +30,10 @@ export function Log(message: any, level: 'log' | 'warn' | 'error' = 'log') {
 		console.log(message);
 		break;
 	case 'warn':
-		console.warn(message);
+		console.warn('WARN: ' + message);
 		break;
 	case 'error':
-		console.error(message);
+		console.error('ERROR: ' + message);
 		break;
 	}
 

@@ -1,4 +1,4 @@
-type TargetFile = {
+type TargetSet = {
 	name: string;
 	contributors?: string[];
 	enabled?: boolean;
