@@ -19,7 +19,7 @@ export const api: SystemResourceApi<ProcessDescriptor, ProcessInfo> = {
 		return processes.find(process => process.name == `${descriptor.name}.exe`) ?? null;
 	},
 	async Delete(processInfo: ProcessInfo) {
-		await Exec(`taskkill /F /IM ${processInfo.name}`);
+		await Exec(`taskkill /F /IM "${processInfo.name}"`);
 	},
 };
 
